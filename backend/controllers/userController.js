@@ -58,7 +58,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 		if (!isMatch) {
 			res.status(400);
-			throw new Error("Invalid Passwprd !!");
+			throw new Error("Invalid Password !!");
 		}
 
 		createToken(res, existingUser._id);
@@ -136,17 +136,58 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const deleteUser = asyncHandler(async (req, res) => {
-	const user = await User.findById(req.user._id);
+
+	const user = await User.findById(req.params.id);
 
 	if (user) {
-		await user.remove();
-		res.status(200).json({ message: "User removed" });
+		if(user.isAdmin) {
+			res.status(400);
+			throw new Error("Admin cannot be deleted !!");
+		} else {
+			await user.remove();
+			res.status(200).json({ message: "User removed :(" });
+		}
 	} else {
 		res.status(404);
-		
 		throw new Error("User not found !!");
 	}
 });
 
+const getUserProfileById = asyncHandler(async (req, res) => {
+	const user = await User.findById(req.params.id).select("-password");
 
-export { createUser, loginUser, getUserProfile, updateUserProfile, deleteUser, logoutUser, getAllUsers };
+	if (user) {
+		res.status(200).json(user);
+	} else {
+		res.status(404);
+		throw new Error("User not found !!");
+	}
+});
+
+const updateUserById = asyncHandler(async (req, res) => {
+	const newDetails = req.body;
+
+	const user = await User.findById(req.params.id);
+
+	if (user) {
+		user.username = newDetails.username || user.username;
+		user.email = newDetails.email || user.email;
+		user.isAdmin = newDetails.isAdmin;
+
+		const updatedUser = await user.save();
+
+		res.status(200).json({
+			_id: updatedUser._id,
+			username: updatedUser.username,
+			email: updatedUser.email,
+			isAdmin: updatedUser.isAdmin,
+		});
+
+	} else {
+		res.status(404);
+		throw new Error("User not found !!");
+	
+	}
+});
+
+export { createUser, loginUser, getUserProfile, updateUserProfile, deleteUser, logoutUser, getAllUsers, getUserProfileById, updateUserById };
